@@ -106,7 +106,8 @@ final class IslandModel {
   private var contentTask: Task<Void, Never>?
   private let expansionAnimation = Animation.spring(response: 0.46, dampingFraction: 0.58)
   private let moduleAnimation = Animation.spring(response: 0.46, dampingFraction: 0.62)
-  private let collapseAnimation = Animation.spring(response: 0.32, dampingFraction: 0.8)
+  // Keep the compact island from rebounding below the physical notch height.
+  private let collapseAnimation = Animation.spring(response: 0.32, dampingFraction: 1)
 
   var preferredCompactStatus: CompactStatus {
     if focus.isRunning || focus.isPaused {

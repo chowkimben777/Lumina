@@ -11,7 +11,7 @@ Lumina sits flush with a MacBook's notch while idle. Move the pointer over the n
 - **Notch-first interface**: stays visually integrated with the notch and expands with a spring motion while keeping its top edge anchored.
 - **Clipboard history**: keeps local text, link, and image history with restore, pin, delete, and clear actions.
 - **Focus timer**: start 25, 50, or 90 minute sessions; pause, resume, or stop directly from the island.
-- **Media status**: reads Apple Music and Spotify distributed notifications and exposes playback control when available.
+- **Media status**: reads Apple Music and Spotify notifications, plus experimental QQ Music display and play/pause control on macOS 26.
 - **Native macOS behavior**: built with SwiftUI and AppKit; available across Spaces and full-screen apps.
 
 ## Requirements
@@ -68,7 +68,7 @@ Clipboard history is stored locally at:
 ~/Library/Application Support/Lumina/clipboard-history.json
 ```
 
-Lumina does not upload clipboard data. It ignores concealed pasteboard types commonly used by password managers. Media support depends on local distributed notifications from Apple Music and Spotify; players that do not publish these notifications are not detected.
+Lumina does not upload clipboard data. It ignores concealed pasteboard types commonly used by password managers. QQ Music support uses a macOS 26 system-media bridge. It is experimental because Apple does not offer a public API for third-party apps to read system-wide media metadata.
 
 ## Development
 

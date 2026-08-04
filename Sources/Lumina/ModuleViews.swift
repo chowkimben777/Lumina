@@ -172,6 +172,7 @@ struct MediaModuleView: View {
       }
       .buttonStyle(.glassProminent)
       .tint(.cyan)
+      .disabled(model.media.isChangingPlayback)
       .help(model.media.isPlaying ? "暂停" : "播放")
       Spacer()
     }

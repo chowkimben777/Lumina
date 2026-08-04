@@ -1,4 +1,5 @@
 import AppKit
+import Foundation
 import SwiftUI
 
 struct IslandRootView: View {
@@ -192,9 +193,7 @@ private struct CompactIslandView: View {
         .rotationEffect(.degrees(-90))
         .frame(width: 15, height: 15)
     case .media:
-      Image(systemName: model.media.isPlaying ? "waveform" : "pause.fill")
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(.cyan)
+      PlayingWaveform(isPlaying: model.media.isPlaying)
     case .idle:
       Image(systemName: "sparkle")
         .font(.system(size: 10, weight: .semibold))
@@ -210,11 +209,38 @@ private struct CompactIslandView: View {
         .monospacedDigit()
         .font(.system(size: 12, weight: .semibold))
     case .media:
-      Image(systemName: "play.fill")
+      Image(systemName: model.media.isPlaying ? "pause.fill" : "play.fill")
         .font(.system(size: 10, weight: .bold))
     case .idle:
       EmptyView()
     }
+  }
+}
+
+private struct PlayingWaveform: View {
+  let isPlaying: Bool
+  private let baseHeights: [CGFloat] = [7, 11, 15, 11, 7]
+
+  var body: some View {
+    TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: !isPlaying)) { context in
+      let time = context.date.timeIntervalSinceReferenceDate
+      HStack(alignment: .center, spacing: 1.5) {
+        ForEach(baseHeights.indices, id: \.self) { index in
+          RoundedRectangle(cornerRadius: 1.2, style: .continuous)
+            .fill(.cyan)
+            .frame(width: 2, height: barHeight(at: index, time: time))
+        }
+      }
+      .frame(width: 16, height: 17)
+    }
+    .accessibilityLabel(isPlaying ? "正在播放" : "已暂停")
+  }
+
+  private func barHeight(at index: Int, time: TimeInterval) -> CGFloat {
+    guard isPlaying else { return baseHeights[index] * 0.45 }
+    let phase = time * 5.4 + Double(index) * 1.37
+    let amplitude = 0.38 + 0.62 * abs(sin(phase))
+    return max(3, baseHeights[index] * amplitude)
   }
 }
 
@@ -391,6 +417,7 @@ private struct MediaStatusRow: View {
           .frame(width: 28, height: 28)
       }
       .buttonStyle(.glass)
+      .disabled(model.media.isChangingPlayback)
       .help(model.media.isPlaying ? "暂停" : "播放")
     }
     .foregroundStyle(.white)
