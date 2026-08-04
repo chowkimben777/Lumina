@@ -1,35 +1,36 @@
 # Lumina
 
-Lumina 是一个原生 macOS 刘海交互工具。静态时它贴合 MacBook 顶部刘海；鼠标进入后，岛体从顶部向左右与下方展开，提供剪贴板历史、专注计时和媒体状态等常用功能。
+> A native macOS notch companion for clipboard history, focus sessions, and media controls.
 
-当前项目针对带刘海的 MacBook 与 macOS 26 设计，使用 SwiftUI 和 AppKit 实现。
+[简体中文](README.zh-CN.md)
 
-## 功能
+Lumina sits flush with a MacBook's notch while idle. Move the pointer over the notch to expand a top-anchored Dynamic Island with the controls you use most often.
 
-- 静态刘海状态：无任务时保持贴合刘海；专注或媒体活动时展示精简状态。
-- 悬停展开：顶部位置固定，岛体以弹簧动画向左右和下方扩展。
-- 剪贴板历史：保存文本、链接与图片；支持恢复、置顶、删除和清空。
-- 专注计时：提供 25、50、90 分钟预设；支持暂停、继续和停止，并在紧凑状态显示倒计时。
-- 媒体状态：读取 Apple Music 与 Spotify 的通知信息，并提供播放/暂停入口。
-- 多桌面可用：浮层可出现在不同 Space 和全屏应用上方。
+## Highlights
 
-## 环境要求
+- **Notch-first interface**: stays visually integrated with the notch and expands with a spring motion while keeping its top edge anchored.
+- **Clipboard history**: keeps local text, link, and image history with restore, pin, delete, and clear actions.
+- **Focus timer**: start 25, 50, or 90 minute sessions; pause, resume, or stop directly from the island.
+- **Media status**: reads Apple Music and Spotify distributed notifications and exposes playback control when available.
+- **Native macOS behavior**: built with SwiftUI and AppKit; available across Spaces and full-screen apps.
 
-- macOS 26 或更高版本
-- 支持 Swift 6.2 的 Xcode
-- 推荐使用带刘海的 MacBook 显示器
+## Requirements
 
-## 运行
+- macOS 26 or later
+- Xcode with Swift 6.2 support
+- A notched MacBook display is recommended
 
-### 在 Xcode 中运行
+## Getting Started
+
+### Xcode
 
 ```bash
 open Package.swift
 ```
 
-在 Xcode 中选择 `Lumina` 可执行方案后运行即可。
+Choose the `Lumina` executable scheme in Xcode and run it.
 
-### 在终端中构建
+### Terminal
 
 ```bash
 chmod +x scripts/build-app.sh
@@ -37,35 +38,54 @@ chmod +x scripts/build-app.sh
 open .build/Lumina.app
 ```
 
-应用会构建到 `.build/Lumina.app`。右键点击岛体可退出应用。
+The app bundle is created at `.build/Lumina.app`.
 
-## 使用方式
+## Usage
 
-- 将鼠标移入刘海区域以展开主面板。
-- 点击“剪贴板”查看并恢复历史记录。
-- 点击“专注”设置计时；计时开始后，可在展开面板直接暂停、继续或停止。
-- 点击“媒体”查看当前媒体状态。
-- 鼠标离开面板后，岛体会自动收起。
+1. Move the pointer into the notch area to open the main island.
+2. Select **Clipboard** to browse and restore local history.
+3. Select **Focus** to start a timer. When one is running, pause, resume, or stop it from the expanded island.
+4. Select **Media** to view the current media state.
+5. Move the pointer away from the panel to collapse it. Right-click the island to quit.
 
-## 数据与隐私
+## Data and Privacy
 
-剪贴板历史仅保存在本机：
+Clipboard history is stored locally at:
 
 ```text
 ~/Library/Application Support/Lumina/clipboard-history.json
 ```
 
-Lumina 不会上传剪贴板内容，也会忽略常见密码管理器使用的隐藏剪贴板类型。媒体状态来自 Apple Music 和 Spotify 的本地分布式通知；未发布这类通知的播放器不会被识别。
+Lumina does not upload clipboard data. It ignores concealed pasteboard types commonly used by password managers. Media support depends on local distributed notifications from Apple Music and Spotify; players that do not publish these notifications are not detected.
 
-## 项目结构
+## Development
 
 ```text
-Sources/Lumina/   SwiftUI 与 AppKit 源码
-Resources/        应用包元数据
-scripts/          本地构建脚本
-Package.swift     Swift Package 配置
+Sources/Lumina/   SwiftUI and AppKit source
+Resources/        App bundle metadata
+scripts/          Local build helpers
+Package.swift     Swift Package manifest
 ```
 
-## 当前范围
+Before opening a pull request, format and build the project:
 
-这是一个面向个人工作流的原型，尚未提供设置页、全局快捷键、签名或公证后的发布包。
+```bash
+xcrun swift-format format --in-place --recursive Sources Package.swift
+./scripts/build-app.sh
+xcrun swift-format lint --recursive Sources Package.swift
+```
+
+## Contributing
+
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) before participating.
+
+## Roadmap
+
+- Preferences for enabled modules and retention limits
+- Global shortcuts
+- Signed and notarized release artifacts
+- More media player integrations
+
+## License
+
+Lumina is released under the [MIT License](LICENSE).
