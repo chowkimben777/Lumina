@@ -33,11 +33,17 @@ enum IslandPresentation: Equatable {
 }
 
 enum IslandLayout {
-  static let compactSideWidth: CGFloat = 48
+  static let compactSideWidth: CGFloat = 72
   static let topAttachmentOverscan: CGFloat = 4
 
+  static var notchScreen: NSScreen? {
+    NSScreen.screens.first {
+      $0.auxiliaryTopLeftArea != nil && $0.auxiliaryTopRightArea != nil
+    } ?? NSScreen.main ?? NSScreen.screens.first
+  }
+
   static var notchWidth: CGFloat {
-    guard let screen = NSScreen.main ?? NSScreen.screens.first,
+    guard let screen = notchScreen,
       let leftArea = screen.auxiliaryTopLeftArea,
       let rightArea = screen.auxiliaryTopRightArea
     else { return 185 }
@@ -45,12 +51,12 @@ enum IslandLayout {
   }
 
   static var menuBarHeight: CGFloat {
-    let screen = NSScreen.main ?? NSScreen.screens.first
+    let screen = notchScreen
     return max(28, screen?.safeAreaInsets.top ?? 32)
   }
 
   static var notchHeight: CGFloat {
-    guard let screen = NSScreen.main ?? NSScreen.screens.first,
+    guard let screen = notchScreen,
       let leftArea = screen.auxiliaryTopLeftArea,
       let rightArea = screen.auxiliaryTopRightArea
     else { return menuBarHeight }
@@ -58,6 +64,14 @@ enum IslandLayout {
   }
 
   static var compactSize: CGSize {
+    idleCompactSize
+  }
+
+  static var idleCompactSize: CGSize {
+    CGSize(width: notchWidth, height: notchHeight + topAttachmentOverscan)
+  }
+
+  static var activeCompactSize: CGSize {
     CGSize(
       width: notchWidth + compactSideWidth * 2,
       height: notchHeight + topAttachmentOverscan
@@ -151,7 +165,7 @@ final class IslandModel {
   }
 }
 
-enum CompactStatus {
+enum CompactStatus: Equatable {
   case idle
   case focus
   case media

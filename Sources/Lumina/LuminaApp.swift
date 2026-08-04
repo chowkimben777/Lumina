@@ -95,7 +95,7 @@ final class IslandPanelController {
   }
 
   private func position() {
-    guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
+    guard let screen = IslandLayout.notchScreen else { return }
     let frame = screen.frame
     // Keep the island's rendered top beyond the display edge. The WindowServer
     // clips the overscan, which removes the transparent row it otherwise adds.

@@ -7,7 +7,10 @@ struct IslandRootView: View {
 
   private var size: CGSize {
     switch model.presentation {
-    case .compact: IslandLayout.compactSize
+    case .compact:
+      model.preferredCompactStatus == .idle
+        ? IslandLayout.idleCompactSize
+        : IslandLayout.activeCompactSize
     case .expanded: IslandLayout.expandedSize
     case .module: IslandLayout.moduleSize
     }
@@ -44,10 +47,17 @@ struct IslandRootView: View {
         .fill(.black)
     }
     .clipShape(shellShape)
+    .overlay {
+      shellShape.stroke(.white.opacity(0.05), lineWidth: 0.5)
+    }
+    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     .contentShape(Rectangle())
+    .animation(.linear(duration: 0.16), value: model.preferredCompactStatus)
     .onTapGesture(perform: model.expand)
     .onAppear { onSizeChange(size) }
     .onChange(of: model.presentation) { _, _ in onSizeChange(size) }
+    .onChange(of: model.preferredCompactStatus) { _, _ in onSizeChange(size) }
     .contextMenu {
       Button("退出 Lumina") { NSApp.terminate(nil) }
     }
@@ -139,15 +149,21 @@ private struct CompactIslandView: View {
   let size: CGSize
 
   var body: some View {
-    HStack(spacing: 0) {
-      statusLeading
-        .frame(width: IslandLayout.compactSideWidth, alignment: .center)
+    Group {
+      if model.preferredCompactStatus == .idle {
+        Color.clear
+      } else {
+        HStack(spacing: 0) {
+          statusLeading
+            .frame(width: IslandLayout.compactSideWidth)
 
-      Color.clear.frame(width: IslandLayout.notchWidth)
+          Color.clear.frame(width: IslandLayout.notchWidth)
 
-      statusTrailing
-        .frame(width: IslandLayout.compactSideWidth, alignment: .center)
-        .fixedSize(horizontal: true, vertical: false)
+          statusTrailing
+            .fixedSize(horizontal: true, vertical: false)
+            .frame(width: IslandLayout.compactSideWidth)
+        }
+      }
     }
     .frame(width: size.width, height: size.height)
     .foregroundStyle(.white)
@@ -184,12 +200,7 @@ private struct CompactIslandView: View {
       Image(systemName: "play.fill")
         .font(.system(size: 10, weight: .bold))
     case .idle:
-      TimelineView(.periodic(from: .now, by: 60)) { context in
-        Text(context.date, format: .dateTime.hour().minute())
-          .monospacedDigit()
-          .font(.system(size: 11, weight: .medium))
-          .foregroundStyle(.secondary)
-      }
+      EmptyView()
     }
   }
 }
