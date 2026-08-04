@@ -40,6 +40,18 @@ open .build/Lumina.app
 
 应用包会生成在 `.build/Lumina.app`。
 
+## 发布版本
+
+可从仓库的 [Releases](../../releases) 页面下载预构建版本。当前未签名版本首次启动时，可能需要按住 Control 点击 App 后选择“打开”，再在 macOS 中确认。
+
+在当前 Mac 架构下创建本地发布包：
+
+```bash
+scripts/package-release.sh v0.1.0
+```
+
+该命令会在 `dist/` 生成 ZIP 与 SHA-256 校验文件。向 GitHub 推送以 `v` 开头的 Git 标签后，GitHub Actions 会执行相同的打包步骤并自动创建 GitHub Release。
+
 ## 使用方式
 
 1. 将鼠标移入刘海区域，打开主岛体。

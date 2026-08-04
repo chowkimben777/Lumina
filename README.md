@@ -40,6 +40,18 @@ open .build/Lumina.app
 
 The app bundle is created at `.build/Lumina.app`.
 
+## Releases
+
+Download prebuilt archives from the repository's [Releases](../../releases) page. Current unsigned builds may require **Control-click > Open** on first launch, followed by confirmation in macOS.
+
+To create a local release archive for the current Mac architecture:
+
+```bash
+scripts/package-release.sh v0.1.0
+```
+
+The command writes a ZIP archive and SHA-256 checksum to `dist/`. Pushing a Git tag that begins with `v` runs the same packaging step in GitHub Actions and creates a GitHub Release automatically.
+
 ## Usage
 
 1. Move the pointer into the notch area to open the main island.

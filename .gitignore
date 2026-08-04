@@ -3,6 +3,7 @@
 
 # Swift Package Manager
 .build/
+dist/
 .swiftpm/
 Package.resolved
 
