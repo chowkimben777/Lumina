@@ -2,7 +2,7 @@ import AppKit
 import Observation
 import SwiftUI
 
-enum IslandModule: String, CaseIterable, Identifiable {
+enum IslandModule: String, CaseIterable, Identifiable, Hashable {
   case clipboard
   case focus
   case media
@@ -26,7 +26,7 @@ enum IslandModule: String, CaseIterable, Identifiable {
   }
 }
 
-enum IslandPresentation: Equatable {
+enum IslandPresentation: Equatable, Hashable {
   case compact
   case expanded
   case module(IslandModule)
@@ -80,18 +80,33 @@ enum IslandLayout {
 
   static let expandedSize = CGSize(width: 380, height: 142)
   static let moduleSize = CGSize(width: 420, height: 360)
-  static let panelSize = moduleSize
+  // A Gaussian shadow remains visible for roughly three times its blur radius.
+  // Keep that falloff inside the transparent panel instead of clipping it.
+  static let shadowPadding: CGFloat = 48
+  static func panelSize(for islandSize: CGSize) -> CGSize {
+    CGSize(
+      width: islandSize.width + shadowPadding * 2,
+      height: islandSize.height + shadowPadding
+    )
+  }
+
+  static let panelSize = panelSize(for: moduleSize)
 }
 
 @MainActor
 @Observable
 final class IslandModel {
   var presentation: IslandPresentation = .compact
+  var showsPresentationContent = true
   let clipboard = ClipboardHistoryStore()
   let focus = FocusTimerModel()
   let media = MediaNowPlayingModel()
   private var isPointerInside = false
   private var transitionTask: Task<Void, Never>?
+  private var contentTask: Task<Void, Never>?
+  private let expansionAnimation = Animation.spring(response: 0.46, dampingFraction: 0.58)
+  private let moduleAnimation = Animation.spring(response: 0.46, dampingFraction: 0.62)
+  private let collapseAnimation = Animation.spring(response: 0.32, dampingFraction: 0.8)
 
   var preferredCompactStatus: CompactStatus {
     if focus.isRunning || focus.isPaused {
@@ -109,9 +124,7 @@ final class IslandModel {
 
     if hovering {
       guard presentation == .compact else { return }
-      withAnimation(.linear(duration: 0.18)) {
-        presentation = .expanded
-      }
+      transition(to: .expanded, animation: expansionAnimation)
     } else {
       guard isAutoCollapsible else { return }
       beginCollapse()
@@ -119,24 +132,18 @@ final class IslandModel {
   }
 
   func open(_ module: IslandModule) {
-    withAnimation(.linear(duration: 0.2)) {
-      presentation = .module(module)
-    }
+    transition(to: .module(module), animation: moduleAnimation)
   }
 
   func expand() {
     guard presentation == .compact else { return }
     isPointerInside = true
     transitionTask?.cancel()
-    withAnimation(.linear(duration: 0.18)) {
-      presentation = .expanded
-    }
+    transition(to: .expanded, animation: expansionAnimation)
   }
 
   func closeModule() {
-    withAnimation(.linear(duration: 0.2)) {
-      presentation = .expanded
-    }
+    transition(to: .expanded, animation: moduleAnimation)
   }
 
   func collapse() {
@@ -149,9 +156,7 @@ final class IslandModel {
     transitionTask = Task {
       try? await Task.sleep(for: delay)
       guard !Task.isCancelled, !self.isPointerInside, self.isAutoCollapsible else { return }
-      withAnimation(.linear(duration: 0.16)) {
-        self.presentation = .compact
-      }
+      self.transition(to: .compact, animation: self.collapseAnimation)
     }
   }
 
@@ -161,6 +166,35 @@ final class IslandModel {
       true
     case .compact:
       false
+    }
+  }
+
+  private func transition(to destination: IslandPresentation, animation: Animation) {
+    contentTask?.cancel()
+
+    if destination == .compact {
+      showsPresentationContent = false
+      withAnimation(animation) {
+        presentation = destination
+      }
+      contentTask = Task {
+        try? await Task.sleep(for: .milliseconds(360))
+        guard !Task.isCancelled else { return }
+        self.showsPresentationContent = true
+      }
+      return
+    }
+
+    showsPresentationContent = false
+    withAnimation(animation) {
+      presentation = destination
+    }
+    contentTask = Task {
+      try? await Task.sleep(for: .milliseconds(80))
+      guard !Task.isCancelled else { return }
+      withAnimation(.linear(duration: 0.22)) {
+        self.showsPresentationContent = true
+      }
     }
   }
 }

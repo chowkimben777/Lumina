@@ -144,16 +144,16 @@ struct MediaModuleView: View {
   @Environment(IslandModel.self) private var model
 
   var body: some View {
-    VStack(spacing: 20) {
+    VStack(spacing: 12) {
       Spacer()
       RoundedRectangle(cornerRadius: 22)
         .fill(.cyan.opacity(0.18))
         .overlay(
           Image(systemName: "music.note")
-            .font(.system(size: 40, weight: .medium))
+            .font(.system(size: 34, weight: .medium))
             .foregroundStyle(.cyan)
         )
-        .frame(width: 132, height: 132)
+        .frame(width: 108, height: 108)
 
       VStack(spacing: 5) {
         Text(model.media.title ?? "没有正在播放的内容")

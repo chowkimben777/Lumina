@@ -28,40 +28,53 @@ struct IslandRootView: View {
   }
 
   var body: some View {
-    ZStack(alignment: .top) {
-      switch model.presentation {
-      case .compact:
-        CompactIslandView(size: size)
-          .transition(.identity)
-      case .expanded:
-        ExpandedIslandView()
-          .transition(.identity)
-      case .module(let module):
-        ModuleIslandView(module: module)
-          .transition(.identity)
+    islandBody
+      .contentShape(Rectangle())
+      .animation(
+        .spring(response: 0.42, dampingFraction: 0.62), value: model.preferredCompactStatus
+      )
+      .onTapGesture(perform: model.expand)
+      .onAppear { onSizeChange(size) }
+      .onChange(of: model.presentation) { _, _ in onSizeChange(size) }
+      .onChange(of: model.preferredCompactStatus) { _, _ in onSizeChange(size) }
+      .contextMenu {
+        Button("退出 Lumina") { NSApp.terminate(nil) }
       }
-    }
-    .frame(width: size.width, height: size.height, alignment: .top)
-    .background {
+  }
+
+  private var islandBody: some View {
+    ZStack(alignment: .top) {
       shellShape
         .fill(.black)
+        .frame(width: size.width, height: size.height, alignment: .top)
+        .overlay {
+          shellShape.stroke(.white.opacity(0.05), lineWidth: 0.5)
+        }
+        .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
+        .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+
+      Group {
+        switch model.presentation {
+        case .compact:
+          CompactIslandView(size: size)
+        case .expanded:
+          ExpandedIslandView()
+        case .module(let module):
+          ModuleIslandView(module: module)
+        }
+      }
+      // Keep content continuous, but never let it escape the animated shell.
+      .frame(width: size.width, height: size.height, alignment: .top)
+      .clipShape(shellShape)
+      .opacity(model.showsPresentationContent ? 1 : 0)
     }
-    .clipShape(shellShape)
-    .overlay {
-      shellShape.stroke(.white.opacity(0.05), lineWidth: 0.5)
-    }
-    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
-    .contentShape(Rectangle())
-    .animation(.linear(duration: 0.16), value: model.preferredCompactStatus)
-    .onTapGesture(perform: model.expand)
-    .onAppear { onSizeChange(size) }
-    .onChange(of: model.presentation) { _, _ in onSizeChange(size) }
-    .onChange(of: model.preferredCompactStatus) { _, _ in onSizeChange(size) }
-    .contextMenu {
-      Button("退出 Lumina") { NSApp.terminate(nil) }
-    }
+    .frame(
+      width: size.width + IslandLayout.shadowPadding * 2,
+      height: size.height + IslandLayout.shadowPadding,
+      alignment: .top
+    )
   }
+
 }
 
 private struct IslandShell<Content: View>: View {
@@ -275,7 +288,8 @@ private struct ModuleIslandView: View {
         HStack {
           Button(action: model.closeModule) {
             Image(systemName: "chevron.left")
-              .frame(width: 24, height: 24)
+              .frame(width: 38, height: 38)
+              .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
           .help("返回")
@@ -320,10 +334,34 @@ private struct FocusStatusRow: View {
       Spacer()
       Button(action: model.focus.togglePause) {
         Image(systemName: model.focus.isRunning ? "pause.fill" : "play.fill")
-          .frame(width: 28, height: 28)
+          .frame(width: 52, height: 36)
+          .background {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+              .fill(.white.opacity(0.08))
+          }
+          .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+              .stroke(.white.opacity(0.12), lineWidth: 1)
+          }
       }
-      .buttonStyle(.glass)
+      .buttonStyle(.plain)
       .help(model.focus.isRunning ? "暂停" : "继续")
+
+      Button(action: model.focus.stop) {
+        Image(systemName: "stop.fill")
+          .frame(width: 52, height: 36)
+          .background {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+              .fill(.white.opacity(0.08))
+          }
+          .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+              .stroke(.white.opacity(0.12), lineWidth: 1)
+          }
+      }
+      .buttonStyle(.plain)
+      .foregroundStyle(.white.opacity(0.76))
+      .help("停止专注")
     }
     .foregroundStyle(.white)
   }
