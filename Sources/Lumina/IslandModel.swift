@@ -10,7 +10,7 @@ enum IslandModule: String, CaseIterable, Identifiable, Hashable {
   var id: String { rawValue }
 
   var title: String {
-    switch self {
+    return switch self {
     case .clipboard: "剪贴板"
     case .focus: "专注"
     case .media: "媒体"
@@ -30,6 +30,37 @@ enum IslandPresentation: Equatable, Hashable {
   case compact
   case expanded
   case module(IslandModule)
+  case completion(AICompletionSource)
+}
+
+enum AICompletionSource: String, Equatable, Hashable {
+  case codex
+  case trae
+
+  var title: String {
+    switch self {
+    case .codex: "Codex 已完成"
+    case .trae: "Trae 已完成"
+    }
+  }
+
+  var symbol: String {
+    switch self {
+    case .codex: "checkmark.circle.fill"
+    case .trae: "sparkles"
+    }
+  }
+
+  func matches(_ application: NSRunningApplication) -> Bool {
+    let bundleIdentifier = application.bundleIdentifier?.lowercased() ?? ""
+    let applicationName = application.localizedName?.lowercased() ?? ""
+    return switch self {
+    case .codex:
+      bundleIdentifier.contains("codex") || applicationName == "codex"
+    case .trae:
+      bundleIdentifier == "cn.trae.app" || applicationName.contains("trae")
+    }
+  }
 }
 
 enum IslandLayout {
@@ -104,10 +135,21 @@ final class IslandModel {
   private var isPointerInside = false
   private var transitionTask: Task<Void, Never>?
   private var contentTask: Task<Void, Never>?
+  private var completionDismissTask: Task<Void, Never>?
+  private let completionMonitor: AICompletionMonitor
   private let expansionAnimation = Animation.spring(response: 0.46, dampingFraction: 0.58)
   private let moduleAnimation = Animation.spring(response: 0.46, dampingFraction: 0.62)
   // Keep the compact island from rebounding below the physical notch height.
   private let collapseAnimation = Animation.spring(response: 0.32, dampingFraction: 1)
+
+  init() {
+    let completionMonitor = AICompletionMonitor()
+    self.completionMonitor = completionMonitor
+    completionMonitor.onCompletion = { [weak self] source in
+      self?.presentCompletion(source)
+    }
+    completionMonitor.start()
+  }
 
   var preferredCompactStatus: CompactStatus {
     if focus.isRunning || focus.isPaused {
@@ -120,6 +162,7 @@ final class IslandModel {
   }
 
   func hoverChanged(_ hovering: Bool) {
+    guard !isShowingCompletion else { return }
     isPointerInside = hovering
     transitionTask?.cancel()
 
@@ -133,21 +176,38 @@ final class IslandModel {
   }
 
   func open(_ module: IslandModule) {
+    completionDismissTask?.cancel()
     transition(to: .module(module), animation: moduleAnimation)
   }
 
   func expand() {
+    guard !isShowingCompletion else { return }
     guard presentation == .compact else { return }
     isPointerInside = true
     transitionTask?.cancel()
     transition(to: .expanded, animation: expansionAnimation)
   }
 
+  func handleIslandTap() {
+    guard case .completion(let source) = presentation else {
+      expand()
+      return
+    }
+
+    NSWorkspace.shared.runningApplications
+      .first(where: source.matches)?
+      .activate(options: [.activateAllWindows])
+    completionDismissTask?.cancel()
+    transition(to: .compact, animation: collapseAnimation)
+  }
+
   func closeModule() {
+    completionDismissTask?.cancel()
     transition(to: .expanded, animation: moduleAnimation)
   }
 
   func collapse() {
+    guard !isShowingCompletion else { return }
     isPointerInside = false
     transitionTask?.cancel()
     beginCollapse(delay: .zero)
@@ -165,8 +225,30 @@ final class IslandModel {
     switch presentation {
     case .expanded, .module:
       true
-    case .compact:
+    case .compact, .completion:
       false
+    }
+  }
+
+  private var isShowingCompletion: Bool {
+    if case .completion = presentation {
+      true
+    } else {
+      false
+    }
+  }
+
+  private func presentCompletion(_ source: AICompletionSource) {
+    transitionTask?.cancel()
+    contentTask?.cancel()
+    completionDismissTask?.cancel()
+    isPointerInside = false
+    transition(to: .completion(source), animation: expansionAnimation)
+
+    completionDismissTask = Task { [weak self] in
+      try? await Task.sleep(for: .seconds(3))
+      guard !Task.isCancelled, self?.presentation == .completion(source) else { return }
+      self?.transition(to: .compact, animation: self?.collapseAnimation ?? .default)
     }
   }
 

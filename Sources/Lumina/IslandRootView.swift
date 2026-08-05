@@ -13,6 +13,7 @@ struct IslandRootView: View {
         ? IslandLayout.idleCompactSize
         : IslandLayout.activeCompactSize
     case .expanded: IslandLayout.expandedSize
+    case .completion: IslandLayout.expandedSize
     case .module: IslandLayout.moduleSize
     }
   }
@@ -22,6 +23,8 @@ struct IslandRootView: View {
     case .compact:
       TopAttachedShape(topInset: 10, bottomRadius: 12)
     case .expanded:
+      TopAttachedShape(topInset: 21, bottomRadius: 32)
+    case .completion:
       TopAttachedShape(topInset: 21, bottomRadius: 32)
     case .module:
       TopAttachedShape(topInset: 21, bottomRadius: 34)
@@ -34,7 +37,7 @@ struct IslandRootView: View {
       .animation(
         .spring(response: 0.42, dampingFraction: 0.62), value: model.preferredCompactStatus
       )
-      .onTapGesture(perform: model.expand)
+      .onTapGesture(perform: model.handleIslandTap)
       .onAppear { onSizeChange(size) }
       .onChange(of: model.presentation) { _, _ in onSizeChange(size) }
       .onChange(of: model.preferredCompactStatus) { _, _ in onSizeChange(size) }
@@ -60,6 +63,8 @@ struct IslandRootView: View {
           CompactIslandView(size: size)
         case .expanded:
           ExpandedIslandView()
+        case .completion(let source):
+          CompletionIslandView(source: source)
         case .module(let module):
           ModuleIslandView(module: module)
         }
@@ -300,6 +305,38 @@ private struct ExpandedIslandView: View {
         Spacer()
       }
       .foregroundStyle(.white)
+    }
+  }
+}
+
+private struct CompletionIslandView: View {
+  let source: AICompletionSource
+
+  var body: some View {
+    IslandShell {
+      HStack(spacing: 13) {
+        ZStack {
+          Circle()
+            .fill(.cyan.opacity(0.16))
+            .frame(width: 38, height: 38)
+          Image(systemName: source.symbol)
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundStyle(.cyan)
+        }
+
+        VStack(alignment: .leading, spacing: 3) {
+          Text(source.title)
+            .font(.system(size: 16, weight: .bold))
+            .foregroundStyle(.white)
+          Text("任务已完成，可以回来看看了")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.white.opacity(0.56))
+        }
+
+        Spacer(minLength: 0)
+      }
+      .padding(.horizontal, 12)
+      .frame(maxHeight: .infinity, alignment: .center)
     }
   }
 }

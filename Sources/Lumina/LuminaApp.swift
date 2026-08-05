@@ -52,7 +52,7 @@ final class IslandPanelController {
     )
     containerView.activeIslandSize = currentSize
     containerView.autoresizingMask = [.width, .height]
-    let hostingView = NSHostingView(
+    let hostingView = FirstMouseHostingView(
       rootView:
         IslandRootView { [weak self] size in
           self?.updateInteractionSize(to: size)
@@ -135,6 +135,10 @@ final class IslandPanel: NSPanel {
 final class IslandContainerView: NSView {
   var activeIslandSize = IslandLayout.compactSize
 
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+    true
+  }
+
   override func hitTest(_ point: NSPoint) -> NSView? {
     let islandFrame = NSRect(
       x: bounds.midX - activeIslandSize.width / 2,
@@ -144,5 +148,11 @@ final class IslandContainerView: NSView {
     )
     guard islandFrame.contains(point) else { return nil }
     return super.hitTest(point)
+  }
+}
+
+final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+    true
   }
 }
