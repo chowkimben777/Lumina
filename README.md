@@ -17,9 +17,9 @@ Lumina sits flush with a MacBook's notch while idle. Move the pointer over the n
 
 ## Requirements
 
-- macOS 26 or later
-- Xcode with Swift 6.2 support
+- macOS 26 or later to run a release build
 - A notched MacBook display is recommended
+- Xcode with Swift 6.2 support only when building from source
 
 ## Getting Started
 
@@ -43,7 +43,11 @@ The app bundle is created at `.build/Lumina.app`.
 
 ## Releases
 
-Download prebuilt archives from the repository's [Releases](../../releases) page. Current unsigned builds may require **Control-click > Open** on first launch, followed by confirmation in macOS.
+Download the archive matching your Mac from the repository's [Releases](../../releases) page. A release build does not require Xcode.
+
+1. Download and unzip `Lumina-v*-macos-arm64.zip` for Apple silicon Macs, or the matching `x86_64` archive for Intel Macs.
+2. Drag `Lumina.app` to `/Applications` or any preferred folder.
+3. On the first launch, **Control-click > Open** and confirm in macOS. The app is currently unsigned and has not been notarized.
 
 To create a local release archive for the current Mac architecture:
 

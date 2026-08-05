@@ -17,9 +17,9 @@ Lumina 在静态时贴合 MacBook 刘海；将鼠标移入刘海区域后，它�
 
 ## 环境要求
 
-- macOS 26 或更高版本
-- 支持 Swift 6.2 的 Xcode
+- 运行发布版需要 macOS 26 或更高版本
 - 推荐使用带刘海的 MacBook 显示器
+- 仅从源码构建时需要支持 Swift 6.2 的 Xcode
 
 ## 快速开始
 
@@ -43,7 +43,11 @@ open .build/Lumina.app
 
 ## 发布版本
 
-可从仓库的 [Releases](../../releases) 页面下载预构建版本。当前未签名版本首次启动时，可能需要按住 Control 点击 App 后选择“打开”，再在 macOS 中确认。
+可从仓库的 [Releases](../../releases) 页面下载与自己 Mac 架构匹配的预构建版本，下载版不需要安装 Xcode。
+
+1. Apple 芯片 Mac 下载 `Lumina-v*-macos-arm64.zip`；Intel Mac 下载对应的 `x86_64` 压缩包。
+2. 解压后将 `Lumina.app` 拖到 `/Applications` 或任意常用目录。
+3. 首次启动时按住 Control 点击 App，选择“打开”，再在 macOS 中确认。当前版本尚未签名和公证。
 
 在当前 Mac 架构下创建本地发布包：
 

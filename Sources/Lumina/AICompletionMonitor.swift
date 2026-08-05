@@ -5,30 +5,23 @@ import Foundation
 final class AICompletionMonitor {
   var onCompletion: ((AICompletionSource) -> Void)?
 
-  private struct FileStamp: Equatable {
-    let modificationDate: Date
-    let size: UInt64
-  }
-
   private let fileManager: FileManager
   private let codexSessionsURL: URL
-  private let traeActivityURL: URL
+  private let traeSnapshotsURL: URL
   private var pollingTask: Task<Void, Never>?
   private var codexSessionURL: URL?
   private var codexSessionOffset: UInt64 = 0
   private var codexTaskUsedTools = false
   private var lastCodexSessionDiscovery = Date.distantPast
-  private var traeActivityStamp: FileStamp?
-  private var traeBurstStart: Date?
-  private var lastTraeActivity: Date?
-  private var traeWriteCount = 0
+  private var knownTraeCompletionTags: Set<String> = []
+  private var lastTraeTagDiscovery = Date.distantPast
 
   init(fileManager: FileManager = .default) {
     self.fileManager = fileManager
     let home = fileManager.homeDirectoryForCurrentUser
     codexSessionsURL = home.appending(path: ".codex/sessions")
-    traeActivityURL = home.appending(
-      path: "Library/Application Support/Trae CN/ModularData/ai-agent/database.db-wal"
+    traeSnapshotsURL = home.appending(
+      path: "Library/Application Support/Trae CN/ModularData/ai-agent/snapshot"
     )
   }
 
@@ -38,7 +31,7 @@ final class AICompletionMonitor {
 
   func start() {
     guard pollingTask == nil else { return }
-    traeActivityStamp = fileStamp(for: traeActivityURL)
+    knownTraeCompletionTags = traeCompletionTags()
     pollingTask = Task { [weak self] in
       while !Task.isCancelled {
         try? await Task.sleep(for: .milliseconds(750))
@@ -50,7 +43,7 @@ final class AICompletionMonitor {
 
   private func poll() {
     pollCodexSession()
-    pollTraeActivity()
+    pollTraeCompletionTags()
   }
 
   private func pollCodexSession() {
@@ -140,41 +133,21 @@ final class AICompletionMonitor {
     }
   }
 
-  private func pollTraeActivity() {
+  private func pollTraeCompletionTags() {
     guard
       NSWorkspace.shared.runningApplications.contains(where: {
         $0.bundleIdentifier == "cn.trae.app"
       })
-    else {
-      resetTraeActivity()
-      return
-    }
-
-    let currentStamp = fileStamp(for: traeActivityURL)
-    guard currentStamp != traeActivityStamp else {
-      finishTraeBurstIfNeeded()
-      return
-    }
-
-    traeActivityStamp = currentStamp
-    let now = Date()
-    if traeBurstStart == nil {
-      traeBurstStart = now
-      traeWriteCount = 0
-    }
-    traeWriteCount += 1
-    lastTraeActivity = now
-  }
-
-  private func finishTraeBurstIfNeeded() {
-    guard let burstStart = traeBurstStart, let lastActivity = lastTraeActivity else { return }
-    let now = Date()
-    guard traeWriteCount >= 3,
-      now.timeIntervalSince(burstStart) >= 1.5,
-      now.timeIntervalSince(lastActivity) >= 2
     else { return }
 
-    resetTraeActivity()
+    let now = Date()
+    guard now.timeIntervalSince(lastTraeTagDiscovery) >= 1.5 else { return }
+    lastTraeTagDiscovery = now
+
+    let currentTags = traeCompletionTags()
+    let completedTags = currentTags.subtracting(knownTraeCompletionTags)
+    knownTraeCompletionTags = currentTags
+    guard !completedTags.isEmpty else { return }
     notifyIfNeeded(for: .trae)
   }
 
@@ -193,18 +166,30 @@ final class AICompletionMonitor {
       || applicationName.contains("trae")
   }
 
-  private func resetTraeActivity() {
-    traeBurstStart = nil
-    lastTraeActivity = nil
-    traeWriteCount = 0
-  }
+  private func traeCompletionTags() -> Set<String> {
+    var tags: Set<String> = []
+    guard
+      let snapshots = try? fileManager.contentsOfDirectory(
+        at: traeSnapshotsURL,
+        includingPropertiesForKeys: nil,
+        options: [.skipsHiddenFiles]
+      )
+    else { return tags }
 
-  private func fileStamp(for url: URL) -> FileStamp? {
-    guard let attributes = try? fileManager.attributesOfItem(atPath: url.path),
-      let modificationDate = attributes[.modificationDate] as? Date,
-      let size = attributes[.size] as? NSNumber
-    else { return nil }
-    return FileStamp(modificationDate: modificationDate, size: size.uint64Value)
+    for snapshot in snapshots {
+      let tagsURL = snapshot.appending(path: "v2/.git/refs/tags")
+      guard
+        let tagURLs = try? fileManager.contentsOfDirectory(
+          at: tagsURL,
+          includingPropertiesForKeys: nil,
+          options: [.skipsHiddenFiles]
+        )
+      else { continue }
+      for tagURL in tagURLs where tagURL.lastPathComponent.hasPrefix("after-chat-turn-") {
+        tags.insert(tagURL.path)
+      }
+    }
+    return tags
   }
 
 }
