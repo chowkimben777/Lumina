@@ -179,3 +179,240 @@ struct MediaModuleView: View {
     .foregroundStyle(.white)
   }
 }
+
+struct ReminderModuleView: View {
+  @Environment(IslandModel.self) private var model
+  @State private var isEditing = false
+  @State private var editingID: UUID?
+  @State private var title = ""
+  @State private var time = Date()
+  @State private var frequency: ReminderFrequency = .once
+  @State private var isEnabled = true
+
+  var body: some View {
+    Group {
+      if isEditing {
+        editor
+      } else {
+        taskList
+      }
+    }
+    .foregroundStyle(.white)
+  }
+
+  private var taskList: some View {
+    VStack(spacing: 10) {
+      HStack {
+        Text("提醒任务")
+          .font(.system(size: 12, weight: .semibold))
+        Spacer()
+        Button(action: beginNewTask) {
+          Image(systemName: "plus")
+            .frame(width: 32, height: 28)
+        }
+        .buttonStyle(.glass)
+        .help("新建提醒")
+      }
+
+      if model.reminders.tasks.isEmpty {
+        ContentUnavailableView(
+          "还没有提醒",
+          systemImage: "bell",
+          description: Text("添加一个时间，到点后 Lumina 会提醒你")
+        )
+      } else {
+        ScrollView {
+          LazyVStack(spacing: 6) {
+            ForEach(model.reminders.tasks) { task in
+              taskRow(task)
+            }
+          }
+        }
+        .scrollIndicators(.hidden)
+      }
+    }
+    .padding(.horizontal, 14)
+  }
+
+  private func taskRow(_ task: ReminderTask) -> some View {
+    HStack(spacing: 10) {
+      Image(systemName: task.isEnabled ? "bell.fill" : "bell.slash")
+        .foregroundStyle(task.isEnabled ? .orange : .secondary)
+        .frame(width: 24)
+
+      VStack(alignment: .leading, spacing: 2) {
+        Text(task.title)
+          .font(.system(size: 12, weight: .semibold))
+          .lineLimit(1)
+        Text(task.scheduleText)
+          .font(.system(size: 10, weight: .medium))
+          .foregroundStyle(.secondary)
+      }
+
+      Spacer(minLength: 0)
+
+      HStack(spacing: 2) {
+        Toggle(
+          "",
+          isOn: Binding(
+            get: { task.isEnabled },
+            set: { _ in model.reminders.toggle(task) }
+          )
+        )
+        .labelsHidden()
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+
+        Button {
+          beginEditing(task)
+        } label: {
+          Image(systemName: "pencil")
+            .frame(width: 36, height: 32)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("编辑提醒")
+
+        Button(role: .destructive) {
+          model.reminders.delete(task)
+        } label: {
+          Image(systemName: "trash")
+            .frame(width: 36, height: 32)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.red.opacity(0.82))
+        .help("删除提醒")
+      }
+    }
+    .padding(.horizontal, 8)
+    .padding(.vertical, 7)
+    .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+    .contextMenu {
+      Button("编辑") { beginEditing(task) }
+      Button("删除", role: .destructive) { model.reminders.delete(task) }
+    }
+  }
+
+  private var editor: some View {
+    VStack(alignment: .leading, spacing: 13) {
+      Text(editingID == nil ? "新建提醒" : "编辑提醒")
+        .font(.system(size: 14, weight: .semibold))
+
+      TextField(
+        "",
+        text: $title,
+        prompt: Text("提醒内容").foregroundStyle(.black.opacity(0.42))
+      )
+      .textFieldStyle(.plain)
+      .foregroundStyle(.black)
+      .tint(.blue)
+      .padding(.horizontal, 10)
+      .frame(height: 36)
+      .background(.white, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+      DatePicker("提醒时间", selection: $time, displayedComponents: .hourAndMinute)
+        .datePickerStyle(.field)
+        .font(.system(size: 12, weight: .semibold))
+        .controlSize(.small)
+
+      HStack(spacing: 7) {
+        Text("重复")
+          .font(.system(size: 11, weight: .semibold))
+          .frame(width: 42, alignment: .leading)
+
+        ForEach(ReminderFrequency.allCases) { option in
+          Button {
+            frequency = option
+          } label: {
+            Text(option.title)
+              .font(.system(size: 10, weight: .semibold))
+              .frame(maxWidth: .infinity)
+              .frame(height: 28)
+              .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+          }
+          .buttonStyle(.plain)
+          .foregroundStyle(frequency == option ? .black : .white.opacity(0.78))
+          .background(
+            frequency == option ? .orange : .white.opacity(0.075),
+            in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+          )
+        }
+      }
+
+      Toggle(isOn: $isEnabled) {
+        Text("启用提醒")
+          .font(.system(size: 12, weight: .semibold))
+      }
+      .toggleStyle(.switch)
+      .controlSize(.small)
+
+      Spacer(minLength: 0)
+
+      HStack(spacing: 8) {
+        Button(action: cancelEditing) {
+          Label("取消", systemImage: "xmark")
+            .font(.system(size: 12, weight: .semibold))
+            .frame(width: 94)
+            .frame(height: 32)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white.opacity(0.86))
+        .background(.white.opacity(0.09), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+        Spacer()
+
+        Button(action: saveTask) {
+          Label("保存", systemImage: "checkmark")
+            .font(.system(size: 12, weight: .semibold))
+            .frame(width: 94)
+            .frame(height: 32)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.black)
+        .background(.orange, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+      }
+      .padding(6)
+      .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .padding(.bottom, 12)
+    }
+    .padding(.horizontal, 14)
+    .padding(.bottom, 10)
+  }
+
+  private func beginNewTask() {
+    editingID = nil
+    title = ""
+    time = Calendar.current.date(byAdding: .minute, value: 5, to: Date()) ?? Date()
+    frequency = .once
+    isEnabled = true
+    isEditing = true
+  }
+
+  private func beginEditing(_ task: ReminderTask) {
+    editingID = task.id
+    title = task.title
+    time =
+      Calendar.current.date(from: DateComponents(hour: task.hour, minute: task.minute)) ?? Date()
+    frequency = task.frequency
+    isEnabled = task.isEnabled
+    isEditing = true
+  }
+
+  private func cancelEditing() {
+    isEditing = false
+  }
+
+  private func saveTask() {
+    let components = Calendar.current.dateComponents([.hour, .minute], from: time)
+    model.reminders.save(
+      id: editingID,
+      title: title,
+      hour: components.hour ?? 9,
+      minute: components.minute ?? 0,
+      frequency: frequency,
+      isEnabled: isEnabled
+    )
+    isEditing = false
+  }
+}

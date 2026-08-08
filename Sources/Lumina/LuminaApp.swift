@@ -54,9 +54,14 @@ final class IslandPanelController {
     containerView.autoresizingMask = [.width, .height]
     let hostingView = FirstMouseHostingView(
       rootView:
-        IslandRootView { [weak self] size in
-          self?.updateInteractionSize(to: size)
-        }
+        IslandRootView(
+          onSizeChange: { [weak self] size in
+            self?.updateInteractionSize(to: size)
+          },
+          onPresentationChange: { [weak self] presentation in
+            self?.updateFocusPolicy(for: presentation)
+          }
+        )
         .environment(model)
         .ignoresSafeArea(edges: .top)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -94,6 +99,17 @@ final class IslandPanelController {
     containerView.activeIslandSize = size
   }
 
+  private func updateFocusPolicy(for presentation: IslandPresentation) {
+    // Automatic status and reminder popups must remain transparent to the
+    // foreground app's keyboard handling. Editing a reminder is deliberate.
+    if case .module(.reminder) = presentation {
+      panel.allowsKeyFocus = true
+    } else {
+      panel.allowsKeyFocus = false
+      panel.makeFirstResponder(nil)
+    }
+  }
+
   private func position() {
     guard let screen = IslandLayout.notchScreen else { return }
     let frame = screen.frame
@@ -124,7 +140,9 @@ final class IslandPanelController {
 }
 
 final class IslandPanel: NSPanel {
-  override var canBecomeKey: Bool { true }
+  var allowsKeyFocus = false
+
+  override var canBecomeKey: Bool { allowsKeyFocus }
   override var canBecomeMain: Bool { false }
 
   override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {

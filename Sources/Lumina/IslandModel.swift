@@ -5,7 +5,7 @@ import SwiftUI
 enum IslandModule: String, CaseIterable, Identifiable, Hashable {
   case clipboard
   case focus
-  case media
+  case reminder
 
   var id: String { rawValue }
 
@@ -13,7 +13,7 @@ enum IslandModule: String, CaseIterable, Identifiable, Hashable {
     return switch self {
     case .clipboard: "剪贴板"
     case .focus: "专注"
-    case .media: "媒体"
+    case .reminder: "提醒"
     }
   }
 
@@ -21,7 +21,7 @@ enum IslandModule: String, CaseIterable, Identifiable, Hashable {
     switch self {
     case .clipboard: "clipboard"
     case .focus: "timer"
-    case .media: "waveform"
+    case .reminder: "bell"
     }
   }
 }
@@ -31,6 +31,7 @@ enum IslandPresentation: Equatable, Hashable {
   case expanded
   case module(IslandModule)
   case completion(AICompletionSource)
+  case reminder(ReminderTask)
 }
 
 enum AICompletionSource: String, Equatable, Hashable {
@@ -132,6 +133,7 @@ final class IslandModel {
   let clipboard = ClipboardHistoryStore()
   let focus = FocusTimerModel()
   let media = MediaNowPlayingModel()
+  let reminders = ReminderStore()
   private var isPointerInside = false
   private var transitionTask: Task<Void, Never>?
   private var contentTask: Task<Void, Never>?
@@ -149,6 +151,9 @@ final class IslandModel {
       self?.presentCompletion(source)
     }
     completionMonitor.start()
+    reminders.onReminder = { [weak self] task in
+      self?.presentReminder(task)
+    }
   }
 
   var preferredCompactStatus: CompactStatus {
@@ -190,6 +195,11 @@ final class IslandModel {
 
   func handleIslandTap() {
     guard case .completion(let source) = presentation else {
+      if case .reminder = presentation {
+        completionDismissTask?.cancel()
+        transition(to: .compact, animation: collapseAnimation)
+        return
+      }
       expand()
       return
     }
@@ -225,15 +235,16 @@ final class IslandModel {
     switch presentation {
     case .expanded, .module:
       true
-    case .compact, .completion:
+    case .compact, .completion, .reminder:
       false
     }
   }
 
   private var isShowingCompletion: Bool {
-    if case .completion = presentation {
+    switch presentation {
+    case .completion, .reminder:
       true
-    } else {
+    case .compact, .expanded, .module:
       false
     }
   }
@@ -248,6 +259,20 @@ final class IslandModel {
     completionDismissTask = Task { [weak self] in
       try? await Task.sleep(for: .seconds(3))
       guard !Task.isCancelled, self?.presentation == .completion(source) else { return }
+      self?.transition(to: .compact, animation: self?.collapseAnimation ?? .default)
+    }
+  }
+
+  private func presentReminder(_ task: ReminderTask) {
+    transitionTask?.cancel()
+    contentTask?.cancel()
+    completionDismissTask?.cancel()
+    isPointerInside = false
+    transition(to: .reminder(task), animation: expansionAnimation)
+
+    completionDismissTask = Task { [weak self] in
+      try? await Task.sleep(for: .seconds(5))
+      guard !Task.isCancelled, self?.presentation == .reminder(task) else { return }
       self?.transition(to: .compact, animation: self?.collapseAnimation ?? .default)
     }
   }

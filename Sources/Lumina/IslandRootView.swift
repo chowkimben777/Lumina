@@ -5,6 +5,7 @@ import SwiftUI
 struct IslandRootView: View {
   @Environment(IslandModel.self) private var model
   let onSizeChange: (CGSize) -> Void
+  let onPresentationChange: (IslandPresentation) -> Void
 
   private var size: CGSize {
     switch model.presentation {
@@ -14,6 +15,7 @@ struct IslandRootView: View {
         : IslandLayout.activeCompactSize
     case .expanded: IslandLayout.expandedSize
     case .completion: IslandLayout.expandedSize
+    case .reminder: IslandLayout.expandedSize
     case .module: IslandLayout.moduleSize
     }
   }
@@ -25,6 +27,8 @@ struct IslandRootView: View {
     case .expanded:
       TopAttachedShape(topInset: 21, bottomRadius: 32)
     case .completion:
+      TopAttachedShape(topInset: 21, bottomRadius: 32)
+    case .reminder:
       TopAttachedShape(topInset: 21, bottomRadius: 32)
     case .module:
       TopAttachedShape(topInset: 21, bottomRadius: 34)
@@ -38,8 +42,14 @@ struct IslandRootView: View {
         .spring(response: 0.42, dampingFraction: 0.62), value: model.preferredCompactStatus
       )
       .onTapGesture(perform: model.handleIslandTap)
-      .onAppear { onSizeChange(size) }
-      .onChange(of: model.presentation) { _, _ in onSizeChange(size) }
+      .onAppear {
+        onSizeChange(size)
+        onPresentationChange(model.presentation)
+      }
+      .onChange(of: model.presentation) { _, presentation in
+        onSizeChange(size)
+        onPresentationChange(presentation)
+      }
       .onChange(of: model.preferredCompactStatus) { _, _ in onSizeChange(size) }
       .contextMenu {
         Button("退出 Lumina") { NSApp.terminate(nil) }
@@ -65,6 +75,8 @@ struct IslandRootView: View {
           ExpandedIslandView()
         case .completion(let source):
           CompletionIslandView(source: source)
+        case .reminder(let task):
+          ReminderAlertIslandView(task: task)
         case .module(let module):
           ModuleIslandView(module: module)
         }
@@ -368,11 +380,43 @@ private struct ModuleIslandView: View {
           switch module {
           case .clipboard: ClipboardModuleView()
           case .focus: FocusModuleView()
-          case .media: MediaModuleView()
+          case .reminder: ReminderModuleView()
           }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
+    }
+  }
+}
+
+private struct ReminderAlertIslandView: View {
+  let task: ReminderTask
+
+  var body: some View {
+    IslandShell {
+      HStack(spacing: 13) {
+        ZStack {
+          Circle()
+            .fill(.orange.opacity(0.16))
+            .frame(width: 38, height: 38)
+          Image(systemName: "bell.fill")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(.orange)
+        }
+
+        VStack(alignment: .leading, spacing: 3) {
+          Text(task.title)
+            .font(.system(size: 16, weight: .bold))
+            .foregroundStyle(.white)
+          Text("现在是 \(task.timeText)")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.white.opacity(0.56))
+        }
+
+        Spacer(minLength: 0)
+      }
+      .padding(.horizontal, 12)
+      .frame(maxHeight: .infinity, alignment: .center)
     }
   }
 }
