@@ -23,6 +23,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.sha256 \
-            --title "Lumina $GITHUB_REF_NAME" \
-            --generate-notes
+          notes_file=".github/release-notes/${GITHUB_REF_NAME}.md"
+          release_args=(--title "Lumina ${GITHUB_REF_NAME}")
+
+          if [[ -f "$notes_file" ]]; then
+            release_args+=(--notes-file "$notes_file")
+          else
+            release_args+=(--generate-notes)
+          fi
+
+          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.sha256 "${release_args[@]}"

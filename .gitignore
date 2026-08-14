@@ -14,6 +14,9 @@ xcuserdata/
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
 
+# JetBrains
+.idea/
+
 # Signing and local configuration
 *.mobileprovision
 *.cer
@@ -23,3 +26,6 @@ xcuserdata/
 
 # Logs
 *.log
+
+# Release artifacts
+dist/

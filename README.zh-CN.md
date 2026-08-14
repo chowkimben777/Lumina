@@ -53,7 +53,7 @@ open .build/Lumina.app
 在当前 Mac 架构下创建本地发布包：
 
 ```bash
-scripts/package-release.sh v0.1.0
+scripts/package-release.sh v0.2.0
 ```
 
 该命令会在 `dist/` 生成 ZIP 与 SHA-256 校验文件。向 GitHub 推送以 `v` 开头的 Git 标签后，GitHub Actions 会执行相同的打包步骤并自动创建 GitHub Release。

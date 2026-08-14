@@ -53,7 +53,7 @@ Download the archive matching your Mac from the repository's [Releases](../../re
 To create a local release archive for the current Mac architecture:
 
 ```bash
-scripts/package-release.sh v0.1.0
+scripts/package-release.sh v0.2.0
 ```
 
 The command writes a ZIP archive and SHA-256 checksum to `dist/`. Pushing a Git tag that begins with `v` runs the same packaging step in GitHub Actions and creates a GitHub Release automatically.
