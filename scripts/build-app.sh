@@ -37,6 +37,13 @@ cp "$BUILD_DIR/debug/Lumina" "$APP_DIR/Contents/MacOS/Lumina"
 cp "$PROJECT_DIR/Resources/Info.plist" "$APP_DIR/Contents/Info.plist"
 cp "$BRIDGE_DIR/MediaRemoteAdapter.dylib" "$APP_DIR/Contents/Resources/MediaRemoteAdapter.dylib"
 cp "$PROJECT_DIR/Resources/MediaBridge.pl" "$APP_DIR/Contents/Resources/MediaBridge.pl"
+xcrun actool \
+  --compile "$APP_DIR/Contents/Resources" \
+  --platform macosx \
+  --minimum-deployment-target 26.0 \
+  --app-icon AppIcon \
+  --output-partial-info-plist "$BUILD_DIR/assetcatalog-info.plist" \
+  "$PROJECT_DIR/Resources/Assets.xcassets"
 
 codesign --force --sign - "$APP_DIR/Contents/Resources/MediaRemoteAdapter.dylib"
 codesign --force --deep --sign - "$APP_DIR"
